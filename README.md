@@ -41,3 +41,4 @@ This project is a Retrieval-Augmented Generation (RAG) application that helps us
    ```bash
    streamlit run frontend/app.py
    ```
+
