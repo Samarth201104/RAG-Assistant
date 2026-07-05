@@ -1,226 +1,787 @@
 """
-Notes Page
-Premium study notes generation and export
+File: frontend/pages/notes.py
+
+Enterprise Study Notes Generation Page
 """
 
+from __future__ import annotations
+
 import streamlit as st
-from typing import Dict, List
-from components.header import render_page_title
-from components.loading import render_loading_state
-from services.api_client import api_client
-from utils.session import set_error, set_success
-from utils.helpers import truncate_text
-import base64
+
+from components.loading import (
+    loading_error,
+)
+
+from components.citation_card import (
+    render_citation_section,
+)
+
+from services.api_client import (
+    api_client,
+)
+
+from utils.helpers import (
+    page_title,
+)
+
+from utils.session import (
+    get_notes,
+    set_notes,
+)
 
 
-def notes_page() -> None:
-    """Render the notes generation page."""
-    render_page_title("Study Notes Generator", "📚")
-    
-    # Document selection
-    documents = api_client.list_documents("research_documents")
-    
-    if not documents:
-        st.markdown("""
-        <div class="empty-state">
-            <div class="empty-state-icon">📭</div>
-            <h3>No Documents Available</h3>
-            <p>Upload documents to generate study notes</p>
-        </div>
-        """, unsafe_allow_html=True)
-        return
-    
-    # Selection interface
-    st.markdown("### Select Documents for Notes")
-    
-    selected_ids = []
-    cols = st.columns(2)
-    
-    for i, doc in enumerate(documents):
-        with cols[i % 2]:
-            if st.checkbox(
-                doc.get("filename", "Unknown"),
-                key=f"note_doc_{i}",
-                value=True,
-            ):
-                selected_ids.append(doc.get("id"))
-    
-    # Notes type
-    notes_type = st.selectbox(
-        "Notes Format",
-        ["study_notes", "bullet_points", "detailed_analysis", "flashcards"],
-        format_func=lambda x: {
-            "study_notes": "📝 Study Notes",
-            "bullet_points": "🔹 Bullet Points",
-            "detailed_analysis": "📊 Detailed Analysis",
-            "flashcards": "🃏 Flashcards",
-        }.get(x, x),
+# =============================================================================
+# Note Types
+# =============================================================================
+
+NOTE_TYPES = {
+
+    "Study Notes": api_client.generate_notes,
+
+    "Short Notes": api_client.short_notes,
+
+    "Detailed Notes": api_client.detailed_notes,
+
+    "Flashcards": api_client.flashcards,
+
+    "Interview Questions": api_client.interview_questions,
+
+    "Viva Questions": api_client.viva_questions,
+
+    "MCQs": api_client.mcqs,
+
+    "Revision Notes": api_client.revision_notes,
+
+    "Cheat Sheet": api_client.cheat_sheet,
+
+    "Mind Map": api_client.mind_map,
+
+    "FAQs": api_client.faqs,
+
+    "Exam Preparation": api_client.exam_preparation,
+
+    "Concept Explanation": api_client.concept_explanation,
+
+    "Complete Study Package": api_client.complete_notes,
+
+}
+
+
+# =============================================================================
+# Header
+# =============================================================================
+
+def _render_header() -> None:
+    """
+    Render page title.
+    """
+
+    page_title(
+
+        "📚 AI Study Notes Generator",
+
+        (
+            "Generate intelligent study notes, flashcards, "
+            "MCQs, interview questions and more from your "
+            "indexed research documents."
+        ),
+
     )
-    
-    # Generate button
-    if st.button("🎓 Generate Notes", type="primary", use_container_width=True):
-        if not selected_ids:
-            st.warning("Please select at least one document")
-            return
-        
-        handle_generate_notes(selected_ids, notes_type)
 
 
-def handle_generate_notes(document_ids: List[str], notes_type: str) -> None:
-    """
-    Handle notes generation.
-    
-    Args:
-        document_ids: List of document IDs
-        notes_type: Type of notes to generate
-    """
-    with st.spinner(""):
-        render_loading_state("notes")
-    
-    response = api_client.generate_notes(document_ids, notes_type)
-    
-    if response:
-        render_notes_results(response, notes_type)
-    else:
-        set_error("Failed to generate notes")
+# =============================================================================
+# Load Documents
+# =============================================================================
 
+def _load_documents() -> list[str]:
+    """
+    Load indexed documents.
+    """
 
-def render_notes_results(notes_data: Dict, notes_type: str) -> None:
-    """
-    Render generated notes with export options.
-    
-    Args:
-        notes_data: Notes data dictionary
-        notes_type: Type of notes generated
-    """
-    st.markdown("## 📚 Generated Notes")
-    
-    # Notes content
-    content = notes_data.get("content", "")
-    
-    # Render in markdown container
-    st.markdown(f"""
-    <div class="markdown-content">
-        {content}
-    </div>
-    
-    <style>
-        .markdown-content {{
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-primary);
-            border-radius: var(--radius-lg);
-            padding: var(--space-xl);
-            line-height: 1.8;
-        }}
-        
-        .markdown-content h1 {{ 
-            font-size: var(--text-3xl);
-            color: var(--text-primary);
-            border-bottom: 2px solid var(--border-accent);
-            padding-bottom: var(--space-sm);
-        }}
-        
-        .markdown-content h2 {{
-            font-size: var(--text-2xl);
-            color: var(--text-primary);
-        }}
-        
-        .markdown-content h3 {{
-            font-size: var(--text-xl);
-            color: var(--accent-blue);
-        }}
-        
-        .markdown-content ul, .markdown-content ol {{
-            padding-left: var(--space-xl);
-        }}
-        
-        .markdown-content blockquote {{
-            border-left: 4px solid var(--accent-purple);
-            padding-left: var(--space-md);
-            color: var(--text-secondary);
-            font-style: italic;
-            background: var(--bg-tertiary);
-            padding: var(--space-md);
-            border-radius: var(--radius-sm);
-        }}
-        
-        .markdown-content code {{
-            background: var(--bg-primary);
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            font-family: var(--font-mono);
-            font-size: var(--text-sm);
-        }}
-        
-        .markdown-content pre {{
-            background: var(--bg-primary);
-            padding: var(--space-md);
-            border-radius: var(--radius-md);
-            overflow-x: auto;
-            border: 1px solid var(--border-primary);
-        }}
-        
-        .markdown-content table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin: var(--space-md) 0;
-        }}
-        
-        .markdown-content th {{
-            background: var(--bg-tertiary);
-            padding: var(--space-sm) var(--space-md);
-            text-align: left;
-            font-weight: 600;
-            border-bottom: 2px solid var(--border-primary);
-        }}
-        
-        .markdown-content td {{
-            padding: var(--space-sm) var(--space-md);
-            border-bottom: 1px solid var(--border-primary);
-        }}
-    </style>
-    """, unsafe_allow_html=True)
-    
-    # Export section
-    st.markdown("---")
-    st.markdown("### 📥 Export Options")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        if st.button("📋 Copy", use_container_width=True):
-            st.success("Notes copied to clipboard!")
-    
-    with col2:
-        st.download_button(
-            "📝 Markdown",
-            data=content,
-            file_name="study_notes.md",
-            mime="text/markdown",
-            use_container_width=True,
+    try:
+
+        documents = api_client.list_documents()
+
+        if not documents:
+
+            return []
+
+        filenames = []
+
+        for document in documents:
+
+            if isinstance(
+                document,
+                dict,
+            ):
+
+                filenames.append(
+
+                    document.get(
+                        "filename",
+                        "Unknown",
+                    )
+
+                )
+
+            else:
+
+                filenames.append(
+                    str(document)
+                )
+
+        return sorted(filenames)
+
+    except Exception as error:
+
+        loading_error(
+            str(error),
         )
-    
-    with col3:
-        if st.button("📄 PDF", use_container_width=True):
-            handle_export(content, "pdf")
-    
-    with col4:
-        if st.button("📘 DOCX", use_container_width=True):
-            handle_export(content, "docx")
+
+        return []
 
 
-def handle_export(content: str, format_type: str) -> None:
+# =============================================================================
+# Document Selector
+# =============================================================================
+
+def _render_document_selector(
+    documents: list[str],
+) -> str | None:
     """
-    Handle notes export.
-    
-    Args:
-        content: Notes content
-        format_type: Export format
+    Select document.
     """
-    result = api_client.export_notes(content, format_type)
-    
-    if result:
-        set_success(f"Notes exported as {format_type.upper()}")
-        # Trigger download (implement based on response)
+
+    st.markdown(
+        "### 📄 Select Document"
+    )
+
+    if not documents:
+
+        st.info(
+            "No indexed documents available."
+        )
+
+        return None
+
+    return st.selectbox(
+
+        "Document",
+
+        options=documents,
+
+        label_visibility="collapsed",
+
+    )
+
+
+# =============================================================================
+# Note Type Selector
+# =============================================================================
+
+def _render_note_selector() -> tuple[str, callable]:
+    """
+    Select note type.
+    """
+
+    st.markdown(
+        "### 🤖 Note Type"
+    )
+
+    note_name = st.selectbox(
+
+        "Notes",
+
+        list(
+            NOTE_TYPES.keys()
+        ),
+
+        label_visibility="collapsed",
+
+    )
+
+    return (
+
+        note_name,
+
+        NOTE_TYPES[
+            note_name
+        ],
+
+    )
+
+
+# =============================================================================
+# Generate Button
+# =============================================================================
+
+def _render_generate_button() -> bool:
+    """
+    Generate notes button.
+    """
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    return st.button(
+
+        "📚 Generate Notes",
+
+        type="primary",
+
+        use_container_width=True,
+
+    )
+
+
+# =============================================================================
+# Previous Notes
+# =============================================================================
+
+def _render_previous_notes() -> None:
+    """
+    Display previously generated notes.
+    """
+
+    notes = get_notes()
+
+    if not notes:
+
+        return
+
+    st.markdown("---")
+
+    st.markdown(
+        "## 📖 Generated Notes"
+    )
+
+    if isinstance(
+        notes,
+        dict,
+    ):
+
+        response = notes.get(
+
+            "response",
+
+            notes,
+
+        )
+
+        if isinstance(
+            response,
+            dict,
+        ):
+
+            st.json(
+                response,
+            )
+
+        else:
+
+            st.markdown(
+                str(response),
+            )
+
+        citations = notes.get(
+
+            "citations",
+
+            [],
+
+        )
+
+        if citations:
+
+            render_citation_section(
+                citations,
+            )
+
     else:
-        set_error(f"Failed to export as {format_type.upper()}")
+
+        st.markdown(
+            str(notes),
+        )
+
+# =============================================================================
+# Generate Notes
+# =============================================================================
+
+def _generate_notes(
+    filename: str,
+    note_name: str,
+    note_function,
+) -> bool:
+    """
+    Generate AI study notes.
+    """
+
+    try:
+
+        with st.spinner(
+            "Generating AI study notes..."
+        ):
+
+            #
+            # Default endpoint requires note_type
+            #
+
+            if note_function == api_client.generate_notes:
+
+                response = note_function(
+                    filename,
+                    note_name,
+                )
+
+            else:
+
+                response = note_function(
+                    filename,
+                )
+
+        if not response.get(
+            "success",
+            False,
+        ):
+
+            loading_error(
+
+                response.get(
+                    "message",
+                    "Notes generation failed.",
+                )
+
+            )
+
+            return False
+
+        result = response.get(
+            "data",
+            {},
+        )
+
+        #
+        # Normalize backend response
+        #
+
+        if isinstance(
+            result,
+            dict,
+        ):
+
+            notes = (
+
+                result.get("notes")
+
+                or result.get("response")
+
+                or result.get("output")
+
+                or result
+
+            )
+
+            citations = (
+
+                result.get("citations")
+
+                or result.get("sources")
+
+                or []
+
+            )
+
+        else:
+
+            notes = str(result)
+
+            citations = []
+
+        set_notes(
+
+            {
+
+                "response": notes,
+
+                "citations": citations,
+
+            }
+
+        )
+
+        return True
+
+    except Exception as error:
+
+        loading_error(
+            str(error),
+        )
+
+        return False
+
+
+# =============================================================================
+# Action Panel
+# =============================================================================
+
+def _render_action_panel(
+    filename: str | None,
+    note_name: str,
+    note_function,
+) -> None:
+    """
+    Notes generation actions.
+    """
+
+    if filename is None:
+
+        return
+
+    if _render_generate_button():
+
+        success = _generate_notes(
+
+            filename,
+
+            note_name,
+
+            note_function,
+
+        )
+
+        if success:
+
+            st.toast(
+
+                "Study notes generated successfully.",
+
+                icon="✅",
+
+            )
+
+            st.rerun()
+
+
+# =============================================================================
+# Export Notes
+# =============================================================================
+
+def _render_export() -> None:
+    """
+    Export generated notes.
+    """
+
+    notes = get_notes()
+
+    if not notes:
+
+        return
+
+    st.markdown("---")
+
+    st.markdown(
+        "### 📥 Export"
+    )
+
+    response = notes.get(
+        "response",
+        "",
+    )
+
+    export_text = str(
+        response,
+    )
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.download_button(
+
+            label="📄 Download Notes",
+
+            data=export_text,
+
+            file_name="study_notes.txt",
+
+            mime="text/plain",
+
+            use_container_width=True,
+
+        )
+
+    with col2:
+
+        st.button(
+
+            "📋 Copy Notes",
+
+            disabled=True,
+
+            use_container_width=True,
+
+            help="Coming soon",
+
+        )
+
+
+# =============================================================================
+# Notes Statistics
+# =============================================================================
+
+def _render_statistics() -> None:
+    """
+    Display notes statistics.
+    """
+
+    notes = get_notes()
+
+    if not notes:
+
+        return
+
+    response = str(
+
+        notes.get(
+            "response",
+            "",
+        )
+
+    )
+
+    words = len(
+        response.split()
+    )
+
+    characters = len(
+        response
+    )
+
+    citations = len(
+
+        notes.get(
+            "citations",
+            [],
+        )
+
+    )
+
+    st.markdown("---")
+
+    st.markdown(
+        "### 📊 Notes Statistics"
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        st.metric(
+            "Words",
+            words,
+        )
+
+    with col2:
+
+        st.metric(
+            "Characters",
+            characters,
+        )
+
+    with col3:
+
+        st.metric(
+            "Sources",
+            citations,
+        )
+
+# =============================================================================
+# Notes Page
+# =============================================================================
+
+def render_notes_page() -> None:
+    """
+    Render enterprise study notes page.
+    """
+
+    _render_header()
+
+    documents = _load_documents()
+
+    if not documents:
+
+        st.warning(
+            """
+No indexed documents were found.
+
+Please upload one or more PDF documents before
+generating study notes.
+"""
+        )
+
+        return
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    selected_document = _render_document_selector(
+        documents,
+    )
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    note_name, note_function = (
+        _render_note_selector()
+    )
+
+    st.info(
+        f"Selected Note Type : **{note_name}**"
+    )
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_action_panel(
+        selected_document,
+        note_name,
+        note_function,
+    )
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_previous_notes()
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_statistics()
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_export()
+
+
+# =============================================================================
+# Sidebar Notes Statistics
+# =============================================================================
+
+def render_notes_sidebar() -> None:
+    """
+    Optional sidebar notes information.
+    """
+
+    notes = get_notes()
+
+    if not notes:
+
+        return
+
+    st.sidebar.markdown("---")
+
+    st.sidebar.markdown(
+        "### 📚 Notes"
+    )
+
+    response = str(
+        notes.get(
+            "response",
+            "",
+        )
+    )
+
+    st.sidebar.metric(
+        "Words",
+        len(
+            response.split()
+        ),
+    )
+
+    st.sidebar.metric(
+        "Characters",
+        len(
+            response
+        ),
+    )
+
+    st.sidebar.metric(
+        "Sources",
+        len(
+            notes.get(
+                "citations",
+                [],
+            )
+        ),
+    )
+
+    if st.sidebar.button(
+        "🗑 Clear Notes",
+        use_container_width=True,
+    ):
+
+        set_notes(
+            {},
+        )
+
+        st.rerun()
+
+
+# =============================================================================
+# Notes Utilities
+# =============================================================================
+
+def export_notes() -> None:
+    """
+    Export notes text.
+    """
+
+    notes = get_notes()
+
+    if not notes:
+
+        return
+
+    response = notes.get(
+        "response",
+        "",
+    )
+
+    st.download_button(
+
+        label="📥 Export Notes",
+
+        data=str(response),
+
+        file_name="study_notes.txt",
+
+        mime="text/plain",
+
+        use_container_width=True,
+
+    )
+
+
+def notes_available() -> bool:
+    """
+    Check whether notes exist.
+    """
+
+    notes = get_notes()
+
+    return bool(notes)

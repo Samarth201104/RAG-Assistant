@@ -9,7 +9,6 @@ from __future__ import annotations
 import streamlit as st
 
 from components.loading import (
-    loading_context,
     loading_error,
 )
 
@@ -26,26 +25,60 @@ from utils.helpers import (
 )
 
 from utils.session import (
-    set_summary,
     get_summary,
+    set_summary,
 )
 
 
 # =============================================================================
-# Page Header
+# Summary Types
+# =============================================================================
+
+SUMMARY_TYPES = {
+
+    "Complete Summary": api_client.summarize,
+
+    "Executive Summary": api_client.executive_summary,
+
+    "Key Findings": api_client.key_findings,
+
+    "Methodology": api_client.methodology_summary,
+
+    "Limitations": api_client.limitations_summary,
+
+    "Future Work": api_client.future_work_summary,
+
+    "Contribution": api_client.contribution_summary,
+
+    "Abstract": api_client.abstract_summary,
+
+    "One Line Summary": api_client.one_line_summary,
+
+    "TL;DR": api_client.tldr_summary,
+
+    "Complete Summary Package": api_client.complete_summary,
+
+}
+
+
+# =============================================================================
+# Header
 # =============================================================================
 
 def _render_header() -> None:
     """
-    Render page heading.
+    Render page header.
     """
 
     page_title(
-        "📝 Document Summarization",
+
+        "📝 AI Document Summarization",
+
         (
-            "Generate AI-powered summaries from your "
-            "indexed research papers."
+            "Generate intelligent summaries from your "
+            "indexed research papers using Gemini AI."
         ),
+
     )
 
 
@@ -55,7 +88,7 @@ def _render_header() -> None:
 
 def _load_documents() -> list[str]:
     """
-    Load indexed documents from backend.
+    Load indexed documents.
     """
 
     try:
@@ -76,10 +109,12 @@ def _load_documents() -> list[str]:
             ):
 
                 filenames.append(
+
                     document.get(
                         "filename",
                         "Unknown",
                     )
+
                 )
 
             else:
@@ -93,7 +128,7 @@ def _load_documents() -> list[str]:
     except Exception as error:
 
         loading_error(
-            str(error),
+            str(error)
         )
 
         return []
@@ -126,7 +161,7 @@ def _render_document_selector(
 
         "Document",
 
-        documents,
+        options=documents,
 
         label_visibility="collapsed",
 
@@ -134,53 +169,21 @@ def _render_document_selector(
 
 
 # =============================================================================
-# Summary Type
+# Summary Selector
 # =============================================================================
 
-SUMMARY_TYPES = {
-
-    "Complete Summary": "",
-
-    "Executive Summary": "executive",
-
-    "Key Findings": "key-findings",
-
-    "Methodology": "methodology",
-
-    "Limitations": "limitations",
-
-    "Future Work": "future-work",
-
-    "Contribution": "contribution",
-
-    "Abstract": "abstract",
-
-    "One Line Summary": "one-line",
-
-    "TLDR": "tldr",
-
-    "Complete Summary Package": "all",
-
-}
-
-
-def _render_summary_type() -> tuple[str, str]:
+def _render_summary_selector() -> tuple[str, callable]:
     """
-    Render summary type selector.
-
-    Returns
-    -------
-    tuple
-        (label, endpoint)
+    Select summary type.
     """
 
     st.markdown(
         "### 🤖 Summary Type"
     )
 
-    label = st.selectbox(
+    summary_name = st.selectbox(
 
-        "Summary Type",
+        "Summary",
 
         list(
             SUMMARY_TYPES.keys()
@@ -192,9 +195,11 @@ def _render_summary_type() -> tuple[str, str]:
 
     return (
 
-        label,
+        summary_name,
 
-        SUMMARY_TYPES[label],
+        SUMMARY_TYPES[
+            summary_name
+        ],
 
     )
 
@@ -205,7 +210,7 @@ def _render_summary_type() -> tuple[str, str]:
 
 def _render_generate_button() -> bool:
     """
-    Render generate button.
+    Generate summary button.
     """
 
     st.markdown(
@@ -217,20 +222,20 @@ def _render_generate_button() -> bool:
 
         "🚀 Generate Summary",
 
-        use_container_width=True,
-
         type="primary",
+
+        use_container_width=True,
 
     )
 
 
 # =============================================================================
-# Result Viewer
+# Previous Result
 # =============================================================================
 
-def _render_summary_result() -> None:
+def _render_previous_summary() -> None:
     """
-    Render previously generated summary.
+    Display existing summary.
     """
 
     summary = get_summary()
@@ -239,9 +244,7 @@ def _render_summary_result() -> None:
 
         return
 
-    st.markdown(
-        "---"
-    )
+    st.markdown("---")
 
     st.markdown(
         "## 📑 Generated Summary"
@@ -263,13 +266,13 @@ def _render_summary_result() -> None:
         ):
 
             st.json(
-                response,
+                response
             )
 
         else:
 
             st.markdown(
-                str(response),
+                str(response)
             )
 
         citations = summary.get(
@@ -280,11 +283,444 @@ def _render_summary_result() -> None:
         if citations:
 
             render_citation_section(
-                citations,
+                citations
             )
 
     else:
 
         st.markdown(
-            str(summary),
+            str(summary)
         )
+
+# =============================================================================
+# Generate Summary
+# =============================================================================
+
+def _generate_summary(
+    filename: str,
+    summary_function,
+) -> bool:
+    """
+    Generate AI summary.
+    """
+
+    try:
+
+        with st.spinner(
+            "Generating AI summary..."
+        ):
+
+            response = summary_function(
+                filename,
+            )
+
+        if not response.get(
+            "success",
+            False,
+        ):
+
+            loading_error(
+
+                response.get(
+                    "message",
+                    "Summary generation failed.",
+                )
+
+            )
+
+            return False
+
+        result = response.get(
+            "data",
+            {},
+        )
+
+        #
+        # Normalize backend response
+        #
+
+        if isinstance(
+            result,
+            dict,
+        ):
+
+            summary = (
+
+                result.get("summary")
+
+                or result.get("response")
+
+                or result.get("output")
+
+                or result
+
+            )
+
+            citations = (
+
+                result.get("citations")
+
+                or result.get("sources")
+
+                or []
+
+            )
+
+        else:
+
+            summary = str(result)
+
+            citations = []
+
+        set_summary(
+
+            {
+
+                "response": summary,
+
+                "citations": citations,
+
+            }
+
+        )
+
+        return True
+
+    except Exception as error:
+
+        loading_error(
+            str(error),
+        )
+
+        return False
+
+
+# =============================================================================
+# Action Panel
+# =============================================================================
+
+def _render_action_panel(
+    filename: str | None,
+    summary_function,
+) -> None:
+    """
+    Summary generation actions.
+    """
+
+    if filename is None:
+
+        return
+
+    if _render_generate_button():
+
+        success = _generate_summary(
+
+            filename,
+
+            summary_function,
+
+        )
+
+        if success:
+
+            st.toast(
+
+                "Summary generated successfully.",
+
+                icon="✅",
+
+            )
+
+            st.rerun()
+
+
+# =============================================================================
+# Export Summary
+# =============================================================================
+
+def _render_export() -> None:
+    """
+    Export generated summary.
+    """
+
+    summary = get_summary()
+
+    if not summary:
+
+        return
+
+    st.markdown("---")
+
+    st.markdown(
+        "### 📥 Export"
+    )
+
+    response = summary.get(
+        "response",
+        "",
+    )
+
+    if isinstance(
+        response,
+        dict,
+    ):
+
+        export_text = str(
+            response,
+        )
+
+    else:
+
+        export_text = str(
+            response,
+        )
+
+    col1, col2 = st.columns(
+        2,
+    )
+
+    with col1:
+
+        st.download_button(
+
+            label="📄 Download Summary",
+
+            data=export_text,
+
+            file_name="summary.txt",
+
+            mime="text/plain",
+
+            use_container_width=True,
+
+        )
+
+    with col2:
+
+        st.button(
+
+            "📋 Copy Summary",
+
+            disabled=True,
+
+            use_container_width=True,
+
+            help="Coming soon",
+
+        )
+
+
+# =============================================================================
+# Summary Statistics
+# =============================================================================
+
+def _render_statistics() -> None:
+    """
+    Display summary statistics.
+    """
+
+    summary = get_summary()
+
+    if not summary:
+
+        return
+
+    response = str(
+
+        summary.get(
+            "response",
+            "",
+        )
+
+    )
+
+    words = len(
+        response.split()
+    )
+
+    characters = len(
+        response
+    )
+
+    citations = len(
+
+        summary.get(
+            "citations",
+            [],
+        )
+
+    )
+
+    st.markdown("---")
+
+    st.markdown(
+        "### 📊 Summary Statistics"
+    )
+
+    col1, col2, col3 = st.columns(
+        3,
+    )
+
+    with col1:
+
+        st.metric(
+            "Words",
+            words,
+        )
+
+    with col2:
+
+        st.metric(
+            "Characters",
+            characters,
+        )
+
+    with col3:
+
+        st.metric(
+            "Sources",
+            citations,
+        )
+
+# =============================================================================
+# Summarization Page
+# =============================================================================
+
+def render_summarize_page() -> None:
+    """
+    Render enterprise document summarization page.
+    """
+
+    _render_header()
+
+    documents = _load_documents()
+
+    if not documents:
+
+        st.warning(
+            """
+No indexed documents were found.
+
+Please upload one or more PDF documents before
+generating summaries.
+"""
+        )
+
+        return
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    selected_document = _render_document_selector(
+        documents,
+    )
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    summary_name, summary_function = (
+        _render_summary_selector()
+    )
+
+    st.info(
+        f"Selected Summary Type : **{summary_name}**"
+    )
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_action_panel(
+        selected_document,
+        summary_function,
+    )
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_previous_summary()
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_statistics()
+
+    st.markdown(
+        "<br>",
+        unsafe_allow_html=True,
+    )
+
+    _render_export()
+
+
+# =============================================================================
+# Sidebar Summary Statistics
+# =============================================================================
+
+def render_summary_sidebar() -> None:
+    """
+    Optional sidebar summary information.
+    """
+
+    summary = get_summary()
+
+    if not summary:
+
+        return
+
+    st.sidebar.markdown("---")
+
+    st.sidebar.markdown(
+        "### 📝 Summary"
+    )
+
+    response = str(
+        summary.get(
+            "response",
+            "",
+        )
+    )
+
+    st.sidebar.metric(
+        "Words",
+        len(
+            response.split()
+        ),
+    )
+
+    st.sidebar.metric(
+        "Characters",
+        len(
+            response
+        ),
+    )
+
+    st.sidebar.metric(
+        "Sources",
+        len(
+            summary.get(
+                "citations",
+                [],
+            )
+        ),
+    )
+
+    if st.sidebar.button(
+        "🗑 Clear Summary",
+        use_container_width=True,
+    ):
+
+        set_summary(
+            {},
+        )
+
+        st.rerun()

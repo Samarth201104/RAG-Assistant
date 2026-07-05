@@ -7,8 +7,6 @@ MultiModal RAG Research Assistant
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import streamlit as st
 
 # =============================================================================
@@ -32,8 +30,7 @@ from pages.notes import render_notes_page
 # Services
 # =============================================================================
 
-from services.data_manager import data_manager
-from services.state_manager import state_manager
+from services.api_client import api_client
 
 # =============================================================================
 # Utilities
@@ -45,6 +42,12 @@ from utils.constants import (
     LAYOUT,
     INITIAL_SIDEBAR_STATE,
     CSS_PATH,
+)
+
+from utils.session import (
+    initialize_session,
+    get_current_page,
+    set_current_page,
 )
 
 # =============================================================================
@@ -64,12 +67,12 @@ st.set_page_config(
 )
 
 # =============================================================================
-# Load Stylesheet
+# Load CSS
 # =============================================================================
 
 def load_css() -> None:
     """
-    Load custom CSS.
+    Load custom stylesheet.
     """
 
     if CSS_PATH.exists():
@@ -86,53 +89,73 @@ def load_css() -> None:
 load_css()
 
 # =============================================================================
-# Initialize Application State
+# Initialize Session
 # =============================================================================
 
-state_manager.initialize()
+initialize_session()
 
 # =============================================================================
-# Load Cached Dashboard Data
+# Backend Information
 # =============================================================================
 
-dashboard = data_manager.dashboard()
-
-state_manager.refresh_dashboard(
-    dashboard,
-)
-
-# =============================================================================
-# Frequently Used Values
-# =============================================================================
-
-backend_online = dashboard.get(
-    "backend_online",
-    False,
-)
+backend_online = api_client.backend_available()
 
 backend_status = (
-    "Connected"
+
+    "🟢 Connected"
+
     if backend_online
-    else "Offline"
+
+    else "🔴 Offline"
+
 )
 
-document_count = dashboard.get(
-    "document_count",
+# =============================================================================
+# Dashboard Data
+# =============================================================================
+
+if backend_online:
+
+    summary = api_client.collection_summary()
+
+    documents = summary.get(
+
+        "documents",
+
+        [],
+
+    )
+
+    statistics = summary.get(
+
+        "statistics",
+
+        {},
+
+    )
+
+else:
+
+    documents = []
+
+    statistics = {}
+
+document_count = len(
+    documents
+)
+
+chunk_count = statistics.get(
+    "total_chunks",
     0,
 )
 
-chunk_count = dashboard.get(
-    "chunk_count",
-    0,
-)
+# =============================================================================
+# Chat Statistics
+# =============================================================================
 
-documents = dashboard.get(
-    "documents",
-    [],
-)
-
-chat_history = state_manager.get(
+chat_history = st.session_state.get(
     "chat_history",
+    [],
 )
 
 chat_count = len(
@@ -149,7 +172,8 @@ if not backend_online:
         """
 Backend server is currently offline.
 
-Please start the FastAPI server before using the application.
+Please start the FastAPI backend before using
+the application.
 """
     )
 
@@ -158,10 +182,15 @@ Please start the FastAPI server before using the application.
 # =============================================================================
 
 render_header(
+
     backend_status=backend_status,
+
     total_documents=document_count,
+
     total_chunks=chunk_count,
+
     total_chats=chat_count,
+
 )
 
 # =============================================================================
@@ -169,13 +198,20 @@ render_header(
 # =============================================================================
 
 selected_page = render_sidebar(
+
     backend_status=backend_status,
+
     total_documents=document_count,
+
     total_chunks=chunk_count,
+
 )
 
-state_manager.set(
-    "page",
+#
+# Store current page
+#
+
+set_current_page(
     selected_page,
 )
 
@@ -184,6 +220,7 @@ state_manager.set(
 # =============================================================================
 
 st.markdown(
+
     """
 <div class="hero fade-in">
 
@@ -197,29 +234,36 @@ MultiModal <span>RAG</span> Research Assistant
 
 An enterprise AI platform for semantic document retrieval,
 research assistance, intelligent summarization,
-document comparison, and study note generation.
+document comparison and AI-powered study note generation.
 
-Powered by FastAPI, LangChain, Gemini, ChromaDB,
+Powered by FastAPI, LangChain, Gemini, ChromaDB
 and Streamlit.
 
 </p>
 
 </div>
 """,
+
     unsafe_allow_html=True,
+
 )
 
 # =============================================================================
-# Dashboard Metrics
+# Dashboard Overview
 # =============================================================================
 
 st.markdown(
+
     """
 <h2 class="section-title">
+
 Dashboard Overview
+
 </h2>
 """,
+
     unsafe_allow_html=True,
+
 )
 
 metric1, metric2, metric3, metric4 = st.columns(4)
@@ -227,29 +271,47 @@ metric1, metric2, metric3, metric4 = st.columns(4)
 with metric1:
 
     st.metric(
+
         "Backend",
-        "🟢 Online" if backend_online else "🔴 Offline",
+
+        "🟢 Online"
+
+        if backend_online
+
+        else
+
+        "🔴 Offline",
+
     )
 
 with metric2:
 
     st.metric(
+
         "Documents",
+
         document_count,
+
     )
 
 with metric3:
 
     st.metric(
+
         "Vector Chunks",
+
         chunk_count,
+
     )
 
 with metric4:
 
     st.metric(
-        "Chat History",
+
+        "Chat Messages",
+
         chat_count,
+
     )
 
 # =============================================================================
@@ -257,91 +319,108 @@ with metric4:
 # =============================================================================
 
 st.markdown(
+
     """
 <h2 class="section-title">
+
 Quick Actions
+
 </h2>
 """,
+
     unsafe_allow_html=True,
+
 )
 
-action1, action2, action3, action4, action5 = st.columns(5)
+col1, col2, col3, col4, col5 = st.columns(5)
 
-with action1:
+with col1:
 
     if st.button(
+
         "📤 Upload",
+
         use_container_width=True,
+
     ):
 
-        state_manager.set(
-            "page",
+        set_current_page(
             "Upload",
         )
 
         st.rerun()
 
-with action2:
+with col2:
 
     if st.button(
+
         "💬 Chat",
+
         use_container_width=True,
+
     ):
 
-        state_manager.set(
-            "page",
+        set_current_page(
             "Chat",
         )
 
         st.rerun()
 
-with action3:
+with col3:
 
     if st.button(
+
         "📝 Summarize",
+
         use_container_width=True,
+
     ):
 
-        state_manager.set(
-            "page",
+        set_current_page(
             "Summarize",
         )
 
         st.rerun()
 
-with action4:
+with col4:
 
     if st.button(
+
         "⚖ Compare",
+
         use_container_width=True,
+
     ):
 
-        state_manager.set(
-            "page",
+        set_current_page(
             "Compare",
         )
 
         st.rerun()
 
-with action5:
+with col5:
 
     if st.button(
+
         "📚 Notes",
+
         use_container_width=True,
+
     ):
 
-        state_manager.set(
-            "page",
+        set_current_page(
             "Notes",
         )
 
         st.rerun()
 
 st.markdown(
-    "<br>",
-    unsafe_allow_html=True,
-)
 
+    "<br>",
+
+    unsafe_allow_html=True,
+
+)
 
 # =============================================================================
 # Page Router
@@ -349,9 +428,7 @@ st.markdown(
 
 try:
 
-    current_page = state_manager.get(
-        "page",
-    )
+    current_page = get_current_page()
 
     if current_page == "Upload":
 
@@ -382,6 +459,7 @@ try:
 except Exception as error:
 
     st.markdown(
+
         """
 <div class="empty-state">
 
@@ -400,39 +478,56 @@ Unexpected Error
 <div class="empty-text">
 
 The application encountered an unexpected error.
-Please try refreshing the application.
+
+Please refresh the application and try again.
 
 </div>
 
 </div>
 """,
+
         unsafe_allow_html=True,
+
     )
 
     with st.expander(
+
         "Technical Details",
+
         expanded=False,
+
     ):
 
         st.exception(
             error,
         )
 
+
 # =============================================================================
-# Footer
+# Divider
 # =============================================================================
 
 st.markdown(
+
     "<br><br>",
+
     unsafe_allow_html=True,
+
 )
 
 st.markdown(
+
     """
 <hr style="margin-top:30px;margin-bottom:20px;">
 """,
+
     unsafe_allow_html=True,
+
 )
+
+# =============================================================================
+# Footer
+# =============================================================================
 
 footer_left, footer_center, footer_right = st.columns(
     [2, 3, 2]
@@ -460,17 +555,38 @@ with footer_right:
 # Startup Notification
 # =============================================================================
 
-if not state_manager.get(
+if not st.session_state.get(
     "startup_complete",
+    False,
 ):
 
     st.toast(
+
         "🚀 Enterprise AI Research Platform Ready",
+
         icon="🤖",
+
     )
 
-    state_manager.set(
-        "startup_complete",
-        True,
-    )
+    st.session_state[
+        "startup_complete"
+    ] = True
 
+
+# =============================================================================
+# Graceful Shutdown
+# =============================================================================
+
+try:
+
+    pass
+
+finally:
+
+    try:
+
+        api_client.close()
+
+    except Exception:
+
+        pass

@@ -28,62 +28,21 @@ from utils.helpers import (
 )
 
 from utils.session import (
-    update_dashboard,
     set_success,
     set_error,
 )
 
 
 # =============================================================================
-# Refresh Dashboard Statistics
+# Refresh Collection
 # =============================================================================
 
-def _refresh_statistics() -> tuple[int, int]:
+def _collection() -> dict:
     """
-    Refresh collection statistics.
-
-    Returns
-    -------
-    tuple
-        (document_count, chunk_count)
+    Load collection information from backend.
     """
 
-    try:
-
-        documents = api_client.list_documents()
-
-        statistics = api_client.vector_statistics()
-
-        document_count = len(documents)
-
-        chunk_count = statistics.get(
-            "total_chunks",
-            0,
-        )
-
-        backend = (
-            "Online"
-            if api_client.backend_available()
-            else "Offline"
-        )
-
-        update_dashboard(
-            backend_status=backend,
-            document_count=document_count,
-            chunk_count=chunk_count,
-        )
-
-        return (
-
-            document_count,
-
-            chunk_count,
-
-        )
-
-    except Exception:
-
-        return (0, 0)
+    return api_client.collection_summary()
 
 
 # =============================================================================
@@ -97,60 +56,49 @@ def _upload_pdfs(
     Upload PDF documents.
     """
 
-    with loading_context(
-        "Uploading PDF documents..."
-    ):
+    try:
 
-        response = api_client.upload_pdf(
-            pdf_files,
-        )
+        with loading_context(
+            "Uploading PDF documents..."
+        ):
 
-    if response.get(
-        "success",
-        False,
-    ):
-
-        loading_success(
-
-            response.get(
-                "message",
-                "Documents uploaded successfully.",
+            response = api_client.upload_pdf(
+                pdf_files,
             )
 
-        )
+        if response["success"]:
 
-        set_success(
-
-            response.get(
-                "message",
-                "Documents uploaded successfully.",
+            loading_success(
+                response["message"],
             )
 
+            set_success(
+                response["message"],
+            )
+
+            return True
+
+        loading_error(
+            response["message"],
         )
 
-        _refresh_statistics()
-
-        return True
-
-    loading_error(
-
-        response.get(
-            "message",
-            "Upload failed.",
+        set_error(
+            response["message"],
         )
 
-    )
+        return False
 
-    set_error(
+    except Exception as error:
 
-        response.get(
-            "message",
-            "Upload failed.",
+        loading_error(
+            str(error),
         )
 
-    )
+        set_error(
+            str(error),
+        )
 
-    return False
+        return False
 
 
 # =============================================================================
@@ -164,42 +112,38 @@ def _upload_images(
     Upload image documents.
     """
 
-    with loading_context(
-        "Uploading images..."
-    ):
+    try:
 
-        response = api_client.upload_images(
-            image_files,
-        )
+        with loading_context(
+            "Uploading images..."
+        ):
 
-    if response.get(
-        "success",
-        False,
-    ):
-
-        loading_success(
-
-            response.get(
-                "message",
-                "Images uploaded successfully.",
+            response = api_client.upload_images(
+                image_files,
             )
 
+        if response["success"]:
+
+            loading_success(
+                response["message"],
+            )
+
+            return True
+
+        loading_error(
+            response["message"],
         )
 
-        _refresh_statistics()
+        return False
 
-        return True
+    except Exception as error:
 
-    loading_error(
-
-        response.get(
-            "message",
-            "Image upload failed.",
+        loading_error(
+            str(error),
         )
 
-    )
+        return False
 
-    return False
 
 # =============================================================================
 # Upload Handler
@@ -212,32 +156,38 @@ def _handle_upload(
     Upload selected files.
     """
 
-    pdf_files = []
+    pdfs = []
 
-    image_files = []
+    images = []
 
     for file in uploaded_files:
 
-        if file.name.lower().endswith(".pdf"):
+        if file.name.lower().endswith(
+            ".pdf"
+        ):
 
-            pdf_files.append(file)
+            pdfs.append(
+                file,
+            )
 
         else:
 
-            image_files.append(file)
+            images.append(
+                file,
+            )
 
     success = True
 
-    if pdf_files:
+    if pdfs:
 
         success &= _upload_pdfs(
-            pdf_files,
+            pdfs,
         )
 
-    if image_files:
+    if images:
 
         success &= _upload_images(
-            image_files,
+            images,
         )
 
     return success
@@ -247,20 +197,27 @@ def _handle_upload(
 # Collection Statistics
 # =============================================================================
 
-def _render_collection_statistics() -> None:
+def _render_collection_statistics(
+    summary: dict,
+) -> None:
     """
     Render collection statistics.
     """
 
-    documents = api_client.list_documents()
+    documents = summary.get(
+        "documents",
+        [],
+    )
 
-    _render_collection_statistics(documents)
+    statistics = summary.get(
+        "statistics",
+        {},
+    )
 
-    _render_documents(documents)
-
-    statistics = api_client.vector_statistics()
-
-    total_documents = len(documents)
+    total_documents = summary.get(
+        "document_count",
+        len(documents),
+    )
 
     total_chunks = statistics.get(
         "total_chunks",
@@ -273,15 +230,14 @@ def _render_collection_statistics() -> None:
 
         for document in documents
 
-        if str(document).lower().endswith(".pdf")
+        if str(document).lower().endswith(
+            ".pdf"
+        )
 
     )
 
-    image_count = total_documents - pdf_count
-
-    total_size = statistics.get(
-        "collection_size",
-        "N/A",
+    image_count = (
+        total_documents - pdf_count
     )
 
     st.markdown(
@@ -318,18 +274,14 @@ def _render_collection_statistics() -> None:
             image_count,
         )
 
-    st.caption(
-        f"Storage Usage : {total_size}"
-    )
-
 
 # =============================================================================
-# Upload Summary Card
+# Knowledge Base
 # =============================================================================
 
 def _render_collection_summary() -> None:
     """
-    Render collection summary.
+    Knowledge base overview.
     """
 
     markdown_card(
@@ -344,12 +296,12 @@ def _render_collection_summary() -> None:
 
 <p>
 
-Upload research papers and images to
-build your AI knowledge base.
+Upload PDFs and Images to build your
+semantic knowledge base.
 
-Every uploaded document is indexed
-inside ChromaDB and becomes searchable
-using semantic retrieval.
+Every uploaded document is processed,
+embedded and indexed inside ChromaDB
+for Retrieval-Augmented Generation.
 
 </p>
 
@@ -361,53 +313,51 @@ using semantic retrieval.
 # Indexed Documents
 # =============================================================================
 
-def _render_documents() -> None:
+def _render_documents(
+    documents: list,
+) -> None:
     """
-    Display indexed documents.
+    Render indexed documents.
     """
 
-    st.markdown("## 📚 Indexed Documents")
+    st.markdown(
+        "## 📚 Indexed Documents"
+    )
 
-    try:
+    if not documents:
 
-        documents = api_client.list_documents()
+        st.info(
+            "No indexed documents found. Upload a PDF or image to begin."
+        )
 
-        _render_collection_statistics(documents)
+        return
 
-        _render_documents(documents)
+    for document in documents:
 
-        if not documents:
+        if isinstance(
+            document,
+            dict,
+        ):
 
-            st.info(
-                "No indexed documents found."
+            filename = document.get(
+                "filename",
+                "Unknown",
             )
 
-            return
+        else:
 
-        for document in documents:
-
-            if isinstance(
+            filename = str(
                 document,
-                dict,
-            ):
-
-                filename = document.get(
-                    "filename",
-                    "Unknown",
-                )
-
-            else:
-
-                filename = str(document)
-
-            col1, col2 = st.columns(
-                [10, 1]
             )
 
-            with col1:
+        col1, col2 = st.columns(
+            [10, 1]
+        )
 
-                markdown_card(
-                    f"""
+        with col1:
+
+            markdown_card(
+                f"""
 <div class="file-card">
 
 <div class="file-left">
@@ -438,64 +388,43 @@ Indexed in ChromaDB
 
 </div>
 """
-                )
+            )
 
-            with col2:
+        with col2:
 
-                if st.button(
+            if st.button(
 
-                    "🗑",
+                "🗑",
 
-                    key=f"delete_{filename}",
+                key=f"delete_{filename}",
 
-                    help="Delete Document",
+                help="Delete document",
 
+            ):
+
+                with loading_context(
+                    "Deleting document..."
                 ):
 
-                    with loading_context(
-                        "Deleting document..."
-                    ):
+                    response = api_client.delete_document(
+                        filename,
+                    )
 
-                        response = api_client.delete_document(
-                            filename,
-                        )
+                if response["success"]:
 
-                    if response.get(
-                        "success",
-                        False,
-                    ):
+                    loading_success(
+                        response["message"],
+                    )
 
-                        loading_success(
+                    st.cache_data.clear()
 
-                            response.get(
-                                "message",
-                                "Document deleted.",
-                            )
+                    st.rerun()
 
-                        )
+                else:
 
-                        _refresh_statistics()
-
-                        st.cache_data.clear()
-
-                        st.rerun()
-
-                    else:
-
-                        loading_error(
-
-                            response.get(
-                                "message",
-                                "Delete failed.",
-                            )
-
-                        )
-
-    except Exception as error:
-
-        loading_error(
-            str(error),
-        )
+                    loading_error(
+                        response["message"],
+                    )
 
 
 # =============================================================================
@@ -504,14 +433,17 @@ Indexed in ChromaDB
 
 def render_upload_page() -> None:
     """
-    Render upload page.
+    Enterprise upload page.
     """
 
     page_title(
 
         "📤 Upload Documents",
 
-        "Upload research papers and images to build your knowledge base.",
+        (
+            "Upload PDF documents and images "
+            "to build your AI knowledge base."
+        ),
 
     )
 
@@ -524,7 +456,7 @@ def render_upload_page() -> None:
         if not uploaded_files:
 
             st.warning(
-                "Please select one or more files."
+                "Please select at least one file."
             )
 
         else:
@@ -539,7 +471,7 @@ def render_upload_page() -> None:
 
                 st.toast(
 
-                    "Upload completed successfully.",
+                    "Documents uploaded successfully.",
 
                     icon="✅",
 
@@ -552,7 +484,11 @@ def render_upload_page() -> None:
         unsafe_allow_html=True,
     )
 
-    _render_collection_statistics()
+    summary = _collection()
+
+    _render_collection_statistics(
+        summary,
+    )
 
     st.markdown(
         "<br>",
@@ -566,4 +502,9 @@ def render_upload_page() -> None:
         unsafe_allow_html=True,
     )
 
-    _render_documents()
+    _render_documents(
+        summary.get(
+            "documents",
+            [],
+        )
+    )
