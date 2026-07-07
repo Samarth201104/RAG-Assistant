@@ -241,6 +241,7 @@ def render_typing_indicator() -> None:
 
 def render_citations(
     citations: list | None,
+    message_index: int,
 ) -> None:
     """
     Render citations below AI response.
@@ -292,7 +293,7 @@ def render_citations(
         )
 
         with st.expander(
-            f"📄 Source {index}: {source}",
+            f"📄 Source {message_index + 1}.{index}: {source}",
             expanded=False,
         ):
 
@@ -329,30 +330,36 @@ def render_citations(
 
 def render_toolbar(
     response: str,
+    message_index: int,
 ) -> None:
     """
     Render response tools.
     """
 
-    col1, col2 = st.columns(
-        [1, 1]
-    )
+    col1, col2 = st.columns([3, 1])
 
     with col1:
 
-        render_copy_response(
-            response,
-        )
+        with st.expander(
+            f"📋 Copy Response #{message_index + 1}",
+            expanded=False,
+        ):
+            st.code(
+                response,
+                language=None,
+            )
 
     with col2:
 
+        regenerate_key = f"regen_{message_index}_{abs(hash(response))}"
+
         st.button(
             "🔄 Regenerate",
+            key=regenerate_key,
             disabled=True,
             use_container_width=True,
             help="Coming soon",
         )
-
 
 # =============================================================================
 # Complete Chat Message
@@ -361,6 +368,7 @@ def render_toolbar(
 def render_chat_message(
     role: str,
     message: str,
+    message_index: int,
     citations: list | None = None,
 ) -> None:
     """
@@ -383,10 +391,12 @@ def render_chat_message(
 
     render_toolbar(
         message,
+        message_index,
     )
 
     render_citations(
         citations,
+        message_index,
     )
 
     render_divider()

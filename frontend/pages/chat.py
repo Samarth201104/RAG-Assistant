@@ -141,7 +141,7 @@ def _render_chat_history() -> None:
 
         return
 
-    for message in history:
+    for index, message in enumerate(history):
 
         render_chat_message(
 
@@ -154,6 +154,8 @@ def _render_chat_history() -> None:
                 "content",
                 "",
             ),
+
+            message_index=index,
 
             citations=message.get(
                 "citations",
@@ -181,7 +183,7 @@ def _render_toolbar() -> None:
         if st.button(
 
             "🗑 Clear Chat",
-
+            key = "clear_chat_button",
             use_container_width=True,
 
         ):
@@ -293,7 +295,7 @@ def _query_backend(
 
             citations = []
 
-        history = get_chat_history()
+        history = list(get_chat_history())
 
         history.append(
 
@@ -654,6 +656,7 @@ def render_chat_sidebar() -> None:
 
     if st.sidebar.button(
         "📥 Export Chat",
+        key = "sidebar_export_chat",
         use_container_width=True,
     ):
 
@@ -661,6 +664,7 @@ def render_chat_sidebar() -> None:
 
     if st.sidebar.button(
         "🗑 Clear Conversation",
+        key = "sidebar_clear_chat",
         use_container_width=True,
     ):
 
