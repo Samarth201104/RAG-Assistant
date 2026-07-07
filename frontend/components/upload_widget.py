@@ -131,7 +131,9 @@ def _render_uploader():
 
     return st.file_uploader(
 
-        label="",
+        label="Upload Documents",
+
+        key="upload_widget",
 
         type=SUPPORTED_FILE_TYPES,
 
@@ -366,6 +368,7 @@ def _render_actions() -> bool:
 
         ):
 
+            st.session_state.pop("uploaded_files", None)
             st.rerun()
 
     return upload
@@ -424,7 +427,6 @@ def render_upload_widget() -> tuple[bool, list]:
     )
     """
 
-    _render_header()
 
     uploaded_files = _render_uploader()
 
