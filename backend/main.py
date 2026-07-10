@@ -2,6 +2,7 @@
 File: backend/main.py
 """
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -79,7 +80,7 @@ Features
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Restrict in production
+    allow_origins=["*"],          # Restrict after frontend deployment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -91,15 +92,10 @@ app.add_middleware(
 # =============================================================================
 
 app.include_router(health_router)
-
 app.include_router(upload_router)
-
 app.include_router(query_router)
-
 app.include_router(summarize_router)
-
 app.include_router(compare_router)
-
 app.include_router(notes_router)
 
 
@@ -117,17 +113,11 @@ async def root():
     """
 
     return {
-
         "application": "MultiModal RAG Research Assistant",
-
         "version": "1.0.0",
-
         "status": "Running",
-
         "docs": "/docs",
-
         "redoc": "/redoc",
-
     }
 
 
@@ -145,20 +135,18 @@ async def api_information():
     """
 
     return {
-
         "upload": "/upload",
-
         "query": "/query",
-
         "summarize": "/summarize",
-
         "compare": "/compare",
-
         "notes": "/notes",
-
         "health": "/health",
-
     }
+
+
+# =============================================================================
+# Local / Production Server
+# =============================================================================
 
 if __name__ == "__main__":
 
@@ -167,6 +155,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=int(os.getenv("PORT", 8000)),
         reload=False,
+        log_level="info",
     )
