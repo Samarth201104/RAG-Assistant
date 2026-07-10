@@ -22,7 +22,7 @@ from core.constants import (
 # Locate Project Root
 # ----------------------------------------
 
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load .env
 load_dotenv(BASE_DIR / ".env")
@@ -62,7 +62,7 @@ class Settings:
 
     CHROMA_DB_PATH = os.getenv(
         "CHROMA_DB_PATH",
-        "vectordb",
+        str(BASE_DIR / "vectordb"),
     )
 
     # ==========================
@@ -109,22 +109,22 @@ class Settings:
 
     UPLOAD_PDF_DIR = os.getenv(
         "UPLOAD_PDF_DIR",
-        "data/uploads/pdfs",
+        str(BASE_DIR / "data" / "uploads" / "pdfs"),
     )
 
     UPLOAD_IMAGE_DIR = os.getenv(
         "UPLOAD_IMAGE_DIR",
-        "data/uploads/images",
+        str(BASE_DIR / "data" / "uploads" / "images"),
     )
 
     PROCESSED_DATA_DIR = os.getenv(
         "PROCESSED_DATA_DIR",
-        "data/processed",
+        str(BASE_DIR / "data" / "processed"),
     )
 
     TEMP_DIR = os.getenv(
         "TEMP_DIR",
-        "data/temp",
+        str(BASE_DIR / "data" / "temp"),
     )
 
     TEMPERATURE = float(
@@ -143,3 +143,32 @@ class Settings:
 
 
 settings = Settings()
+
+# =============================================================================
+# Create Required Directories
+# =============================================================================
+
+Path(settings.CHROMA_DB_PATH).mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+Path(settings.UPLOAD_PDF_DIR).mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+Path(settings.UPLOAD_IMAGE_DIR).mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+Path(settings.PROCESSED_DATA_DIR).mkdir(
+    parents=True,
+    exist_ok=True,
+)
+
+Path(settings.TEMP_DIR).mkdir(
+    parents=True,
+    exist_ok=True,
+)
