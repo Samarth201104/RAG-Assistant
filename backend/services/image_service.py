@@ -21,13 +21,39 @@ class ImageService:
     """
 
     def __init__(self):
+        """
+        Initialize image service.
+
+        EasyOCR is loaded lazily on the first OCR request
+        instead of during backend startup.
+        """
 
         logger.info("Initializing Image Service...")
 
-        self.reader = easyocr.Reader(
-            ["en"],
-            gpu=False,
-        )
+        self.reader = None
+
+    # ------------------------------------------------------------------
+
+    def _get_reader(self):
+        """
+        Lazy-load EasyOCR Reader.
+
+        This reduces backend startup memory and improves
+        deployment stability on Railway.
+        """
+
+        if self.reader is None:
+
+            logger.info("Loading EasyOCR Reader...")
+
+            self.reader = easyocr.Reader(
+                ["en"],
+                gpu=False,
+            )
+
+            logger.info("EasyOCR loaded successfully.")
+
+        return self.reader
 
     # ------------------------------------------------------------------
 
@@ -103,7 +129,9 @@ class ImageService:
                 f"Unable to open image : {image_path}"
             )
 
-        results = self.reader.readtext(
+        reader = self._get_reader()
+
+        results = reader.readtext(
             image
         )
 
@@ -244,6 +272,5 @@ Return a detailed description.
                 2,
             ),
         }
-
 
 image_service = ImageService()
