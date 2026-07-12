@@ -1,18 +1,10 @@
 """
 File: backend/services/embedding_service.py
-
-Embedding Service
-
-Responsibilities
-----------------
-1. Load embedding model once
-2. Generate embeddings for documents
-3. Generate embeddings for queries
-4. Support batch embedding
 """
 
 from typing import List
 
+import numpy as np
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -21,34 +13,24 @@ from core.logger import logger
 
 
 class EmbeddingService:
-    """
-    Singleton Embedding Service.
-
-    Loads the embedding model only once during
-    application startup.
-    """
 
     _instance = None
-    _embeddings = None
 
     def __new__(cls):
+
         if cls._instance is None:
-            cls._instance = super(
-                EmbeddingService,
-                cls,
-            ).__new__(cls)
+            cls._instance = super().__new__(cls)
+            cls._instance._embeddings = None
 
         return cls._instance
 
     # ------------------------------------------------------------
 
-    def __init__(self):
+    def _load_model(self):
 
         if self._embeddings is None:
 
-            logger.info(
-                "Loading Embedding Model..."
-            )
+            logger.info("Loading Embedding Model...")
 
             self._embeddings = HuggingFaceEmbeddings(
                 model_name=settings.EMBEDDING_MODEL,
@@ -68,9 +50,16 @@ class EmbeddingService:
 
     @property
     def embedding_model(self):
-        """
-        Returns LangChain embedding object.
-        """
+
+        self._load_model()
+
+        return self._embeddings
+
+    # ------------------------------------------------------------
+
+    def get_embedding_function(self):
+
+        self._load_model()
 
         return self._embeddings
 
@@ -79,78 +68,41 @@ class EmbeddingService:
     def embed_documents(
         self,
         documents: List[Document],
-    ) -> List[List[float]]:
-        """
-        Generate embeddings for LangChain Documents.
-        """
+    ):
 
-        logger.info(
-            f"Generating embeddings for {len(documents)} chunks."
-        )
+        self._load_model()
 
-        texts = [
-            document.page_content
-            for document in documents
-        ]
+        texts = [doc.page_content for doc in documents]
 
-        embeddings = self._embeddings.embed_documents(
-            texts
-        )
-
-        logger.info(
-            "Document embeddings generated."
-        )
-
-        return embeddings
+        return self._embeddings.embed_documents(texts)
 
     # ------------------------------------------------------------
 
     def embed_texts(
         self,
         texts: List[str],
-    ) -> List[List[float]]:
-        """
-        Generate embeddings for plain text.
-        """
+    ):
 
-        logger.info(
-            f"Embedding {len(texts)} texts."
-        )
+        self._load_model()
 
-        return self._embeddings.embed_documents(
-            texts
-        )
+        return self._embeddings.embed_documents(texts)
 
     # ------------------------------------------------------------
 
     def embed_query(
         self,
         query: str,
-    ) -> List[float]:
-        """
-        Generate embedding for user query.
-        """
+    ):
 
-        logger.info(
-            "Generating query embedding."
-        )
+        self._load_model()
 
-        return self._embeddings.embed_query(
-            query
-        )
+        return self._embeddings.embed_query(query)
 
     # ------------------------------------------------------------
 
-    def embedding_dimension(self) -> int:
-        """
-        Returns embedding dimension.
-        """
+    def embedding_dimension(self):
 
-        vector = self.embed_query(
-            "Embedding Dimension"
-        )
-
-        return len(vector)
+        return len(self.embed_query("dimension"))
 
     # ------------------------------------------------------------
 
@@ -158,57 +110,18 @@ class EmbeddingService:
         self,
         text1: str,
         text2: str,
-    ) -> float:
-        """
-        Computes cosine similarity between
-        two texts.
+    ):
 
-        Returns
-        -------
-        float
-        """
+        e1 = np.array(self.embed_query(text1))
+        e2 = np.array(self.embed_query(text2))
 
-        import numpy as np
-
-        embedding1 = self.embed_query(
-            text1
-        )
-
-        embedding2 = self.embed_query(
-            text2
-        )
-
-        embedding1 = np.array(
-            embedding1
-        )
-
-        embedding2 = np.array(
-            embedding2
-        )
-
-        similarity = np.dot(
-            embedding1,
-            embedding2,
-        )
-
-        return float(similarity)
+        return float(np.dot(e1, e2))
 
     # ------------------------------------------------------------
 
-    def get_model_name(self) -> str:
-        """
-        Returns current embedding model.
-        """
+    def get_model_name(self):
 
         return settings.EMBEDDING_MODEL
 
-        # ------------------------------------------------------------
-
-    def get_embedding_function(self):
-        """
-        Returns the LangChain embedding function.
-        """
-
-        return self._embeddings
 
 embedding_service = EmbeddingService()

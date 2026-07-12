@@ -10,7 +10,6 @@ langchain
 langchain-core
 langchain-community
 langchain-google-genai
-langchain-huggingface
 langchain-text-splitters
 
 langgraph
@@ -19,8 +18,12 @@ chromadb
 langchain-chroma
 
 sentence-transformers
-transformers
 torch
+torchvision
+transformers
+langchain-huggingface
+huggingface_hub
+hf-xet
 
 google-generativeai
 google-genai

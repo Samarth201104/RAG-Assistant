@@ -2,7 +2,7 @@
 File: backend/vectorstore/chroma_manager.py
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
@@ -13,288 +13,166 @@ from services.embedding_service import embedding_service
 
 
 class ChromaManager:
-    """
-    Chroma Vector Database Manager.
-    """
 
     COLLECTION_NAME = "multimodal_rag"
 
-    def __init__(self):
+    _instance = None
 
-        logger.info("Initializing ChromaDB...")
+    def __new__(cls):
 
-        self.vectorstore = Chroma(
-            collection_name=self.COLLECTION_NAME,
-            persist_directory=settings.CHROMA_DB_PATH,
-            embedding_function=embedding_service.get_embedding_function(),
-        )
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.vectorstore = None
 
-        logger.info("ChromaDB initialized successfully.")
+        return cls._instance
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
 
-    def add_documents(
-        self,
-        documents: List[Document],
-    ) -> None:
-        """
-        Store LangChain Documents.
-        """
+    def _initialize(self):
 
-        if not documents:
+        if self.vectorstore is None:
 
-            logger.warning(
-                "No documents to store."
+            logger.info("Initializing ChromaDB...")
+
+            self.vectorstore = Chroma(
+                collection_name=self.COLLECTION_NAME,
+                persist_directory=settings.CHROMA_DB_PATH,
+                embedding_function=embedding_service.get_embedding_function(),
             )
 
-            return
+            logger.info("ChromaDB initialized successfully.")
 
-        self.vectorstore.add_documents(
-            documents
-        )
+    # ------------------------------------------------------------
 
-        logger.info(
-            f"{len(documents)} chunks stored."
-        )
+    def add_documents(self, documents: List[Document]):
 
-    # ------------------------------------------------------------------
+        self._initialize()
 
-    def similarity_search(
-        self,
-        query: str,
-        k: int,
-    ) -> List[Document]:
-        """
-        Semantic Retrieval.
-        """
+        if documents:
+            self.vectorstore.add_documents(documents)
+
+    # ------------------------------------------------------------
+
+    def similarity_search(self, query: str, k: int):
+
+        self._initialize()
 
         return self.vectorstore.similarity_search(
             query=query,
             k=k,
         )
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
 
-    def similarity_search_with_score(
-        self,
-        query: str,
-        k: int,
-    ):
-        """
-        Semantic Retrieval with similarity score.
-        """
+    def similarity_search_with_score(self, query: str, k: int):
+
+        self._initialize()
 
         return self.vectorstore.similarity_search_with_score(
             query=query,
             k=k,
         )
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
 
-    def get_document_chunks(
-        self,
-        filename: str,
-    ) -> List[Document]:
-        """
-        Load every chunk belonging to one document.
+    def get_document_chunks(self, filename: str):
 
-        Used by:
-
-        - Summarization
-        - Comparison
-        - Notes
-        """
-
-        logger.info(
-            f"Loading all chunks of {filename}"
-        )
+        self._initialize()
 
         results = self.vectorstore.get(
-            where={
-                "source": filename
-            },
-            include=[
-                "documents",
-                "metadatas",
-            ],
+            where={"source": filename},
+            include=["documents", "metadatas"],
         )
 
-        documents = []
-
-        texts = results.get(
-            "documents",
-            [],
-        )
-
-        metadatas = results.get(
-            "metadatas",
-            [],
-        )
+        docs = []
 
         for text, metadata in zip(
-            texts,
-            metadatas,
+            results.get("documents", []),
+            results.get("metadatas", []),
         ):
 
-            documents.append(
-
+            docs.append(
                 Document(
                     page_content=text,
                     metadata=metadata,
                 )
-
             )
 
-        logger.info(
-            f"{len(documents)} chunks loaded."
-        )
+        return docs
 
-        return documents
+    # ------------------------------------------------------------
 
-    # ------------------------------------------------------------------
+    def list_documents(self):
 
-    def list_documents(
-        self,
-    ) -> List[str]:
-        """
-        List all indexed documents.
-        """
+        self._initialize()
 
         results = self.vectorstore.get()
 
-        filenames = set()
+        names = set()
 
-        for metadata in results.get(
-            "metadatas",
-            [],
-        ):
+        for metadata in results.get("metadatas", []):
 
             if metadata:
+                names.add(metadata.get("source", "Unknown"))
 
-                filenames.add(
-                    metadata.get(
-                        "source",
-                        "Unknown",
-                    )
-                )
+        return sorted(list(names))
 
-        return sorted(
-            list(filenames)
-        )
+    # ------------------------------------------------------------
 
-    # ------------------------------------------------------------------
+    def delete_document(self, filename: str):
 
-    def delete_document(
-        self,
-        filename: str,
-    ) -> None:
-        """
-        Delete every chunk of one document.
-        """
+        self._initialize()
 
-        results = self.vectorstore.get(
-            where={
-                "source": filename
-            }
-        )
-
-        ids = results.get(
-            "ids",
-            [],
-        )
+        ids = self.vectorstore.get(
+            where={"source": filename}
+        ).get("ids", [])
 
         if ids:
+            self.vectorstore.delete(ids=ids)
 
-            self.vectorstore.delete(
-                ids=ids
-            )
+    # ------------------------------------------------------------
 
-            logger.info(
-                f"{filename} removed."
-            )
+    def document_exists(self, filename: str):
 
-        else:
-
-            logger.warning(
-                f"{filename} not found."
-            )
-
-    # ------------------------------------------------------------------
-
-    def document_exists(
-        self,
-        filename: str,
-    ) -> bool:
-
-        results = self.vectorstore.get(
-            where={
-                "source": filename
-            }
-        )
+        self._initialize()
 
         return len(
-            results.get(
-                "ids",
-                [],
-            )
+            self.vectorstore.get(
+                where={"source": filename}
+            ).get("ids", [])
         ) > 0
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
 
-    def total_chunks(
-        self,
-    ) -> int:
+    def total_chunks(self):
+
+        self._initialize()
 
         return len(
-            self.vectorstore.get().get(
-                "ids",
-                [],
-            )
+            self.vectorstore.get().get("ids", [])
         )
 
-    # ------------------------------------------------------------------
+    # ------------------------------------------------------------
 
-    def clear_collection(
-        self,
-    ):
-        """
-        Delete every vector.
-        """
+    def clear_collection(self):
 
-        ids = self.vectorstore.get().get(
-            "ids",
-            [],
-        )
+        self._initialize()
+
+        ids = self.vectorstore.get().get("ids", [])
 
         if ids:
+            self.vectorstore.delete(ids=ids)
 
-            self.vectorstore.delete(
-                ids=ids
-            )
+    # ------------------------------------------------------------
 
-            logger.warning(
-                "Collection cleared."
-            )
+    def get_collection_statistics(self) -> Dict:
 
-    # ------------------------------------------------------------------
-
-    def get_collection_statistics(
-        self,
-    ) -> Dict:
+        self._initialize()
 
         return {
-
-            "collection_name":
-                self.COLLECTION_NAME,
-
-            "total_documents":
-                len(
-                    self.list_documents()
-                ),
-
-            "total_chunks":
-                self.total_chunks(),
-
+            "collection_name": self.COLLECTION_NAME,
+            "total_documents": len(self.list_documents()),
+            "total_chunks": self.total_chunks(),
         }
 
 
