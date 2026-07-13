@@ -20,11 +20,11 @@ from components.sidebar import render_sidebar
 # Pages
 # =============================================================================
 
-from pages.upload import render_upload_page
-from pages.chat import render_chat_page
-from pages.summarize import render_summarize_page
-from pages.compare import render_compare_page
-from pages.notes import render_notes_page
+from views.upload import render_upload_page
+from views.chat import render_chat_page
+from views.summarize import render_summarize_page
+from views.compare import render_compare_page
+from views.notes import render_notes_page
 
 # =============================================================================
 # Services
