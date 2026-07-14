@@ -377,12 +377,6 @@ Includes APIs for
 
 Artificial Intelligence & Machine Learning Engineer
 
-GitHub:
-> Add your GitHub profile
-
-LinkedIn:
-> Add your LinkedIn profile
-
 ---
 
 # 📄 License
