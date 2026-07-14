@@ -45,7 +45,15 @@ CSS_PATH = ASSETS_DIR / "styles.css"
 # Backend
 # =============================================================================
 
-BACKEND_URL = "http://127.0.0.1:8000"
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+BACKEND_URL = os.environ.get(
+    "BACKEND_URL",
+    "http://127.0.0.1:8000",
+)
 
 API_TIMEOUT = 120
 
