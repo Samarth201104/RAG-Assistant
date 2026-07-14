@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: rag-backend
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - ./backend/.env
+
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/vectordb:/app/vectordb
+      - ./backend/logs:/app/logs
+
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: rag-frontend
+
+    ports:
+      - "8501:8501"
+
+    env_file:
+      - ./frontend/.env.docker
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
