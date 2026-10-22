@@ -34,27 +34,51 @@ The frontend is a client for the existing FastAPI API. All document processing a
 
 ## Run locally
 
-### Backend
+Use two terminals from the repository root. The FastAPI backend and the Next.js frontend run as separate processes.
 
-Create `backend/.env` with the settings described in `backend/.env.example`, including `GEMINI_API_KEY`, then:
+### 1. Configure and run the backend
+
+Create the environment file, then add your Gemini API key. Keep this file private; it is ignored by Git.
 
 ```bash
 cd backend
+# Windows PowerShell:
+Copy-Item .env.example .env
+# macOS/Linux instead:
+# cp .env.example .env
+python -m venv .venv
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+# macOS/Linux instead:
+# source .venv/bin/activate
 pip install -r requirements.txt
 python main.py
 ```
 
 FastAPI runs at [http://127.0.0.1:8000](http://127.0.0.1:8000), with API documentation at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-### Frontend
+### 2. Configure and run the frontend
+
+In a second terminal, from the repository root:
 
 ```bash
 cd frontend
-npm install
+copy .env.example .env.local
+npm ci
 npm run dev
 ```
 
-Next.js runs at [http://localhost:3000](http://localhost:3000). Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to the FastAPI origin. The default is `http://127.0.0.1:8000`.
+If you use macOS/Linux, use `cp .env.example .env.local` instead of `copy`. Confirm `frontend/.env.local` contains `NEXT_PUBLIC_API_URL=http://127.0.0.1:8000`. Next.js runs at [http://localhost:3000](http://localhost:3000). Restart the frontend after changing this variable.
+
+### 3. Use Docker instead
+
+After Docker Desktop is running and `backend/.env` is configured:
+
+```bash
+docker compose up --build
+```
+
+Open the same frontend and backend URLs above. To point the browser at a different backend origin, set `NEXT_PUBLIC_API_URL` before building the frontend image.
 
 ## API integration
 
@@ -73,6 +97,14 @@ The centralized client in `frontend/lib/api.ts` uses these existing endpoints:
 | Study notes | `POST /notes` (`filename`, `note_type`) |
 
 The backend enables CORS for all origins already, so no backend CORS change was needed. Keep all model keys and backend secrets in `backend/.env`; do not use `NEXT_PUBLIC_` for secrets.
+
+Removing a document from the Documents page removes its indexed chunks from ChromaDB. The original uploaded file remains in the backend upload folder because the existing API only deletes the index entry.
+
+### Troubleshooting
+
+- If the frontend reports that the research service is unavailable, start FastAPI and confirm `NEXT_PUBLIC_API_URL` points to its reachable address.
+- If you edit `frontend/.env.local`, restart Next.js so it reads the updated setting.
+- If Docker cannot connect to its engine, start Docker Desktop before running Compose.
 
 ## Docker
 

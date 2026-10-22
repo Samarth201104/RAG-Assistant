@@ -62,7 +62,9 @@ export default function Home() {
   useEffect(() => {
     setDark(localStorage.getItem('atlas-theme') === 'dark');
     api.health().then(() => setApiOnline(true)).catch(() => setApiOnline(false));
-    void refreshDocuments();
+    void refreshDocuments().catch(reason => {
+      setError(reason instanceof Error ? reason.message : 'Unable to load indexed documents.');
+    });
   }, []);
 
   useEffect(() => {
@@ -75,12 +77,10 @@ export default function Home() {
   }, [messages, busy]);
 
   async function refreshDocuments() {
-    try {
-      const files = await api.documents();
-      setDocuments(files);
-      setSelected(current => current || files[0] || '');
-      setSecond(current => current || files[1] || '');
-    } catch { /* The API status and feature actions surface connection errors. */ }
+    const files = await api.documents();
+    setDocuments(files);
+    setSelected(current => current || files[0] || '');
+    setSecond(current => current || files[1] || '');
   }
 
   async function run<T>(operation: () => Promise<T>, done: (value: T) => void) {
@@ -174,11 +174,19 @@ export default function Home() {
         <button className="button primary" disabled={busy} onClick={() => fileInput.current?.click()}><Plus size={15} />{busy ? 'Working…' : 'Choose files'}</button>
         <small>Multiple files supported · PDF, PNG, JPG, BMP, TIFF</small>
       </div>
-      <div className="section-heading library-heading"><div><h2>Indexed documents</h2><p>{documents.length} {documents.length === 1 ? 'document' : 'documents'} in your library</p></div><button className="icon-button" onClick={() => void refreshDocuments()} aria-label="Refresh documents"><Activity size={16} /></button></div>
+      <div className="section-heading library-heading"><div><h2>Indexed documents</h2><p>{documents.length} {documents.length === 1 ? 'document' : 'documents'} in your library</p></div><button className="icon-button" onClick={() => void refreshDocuments().catch(reason => setError(reason instanceof Error ? reason.message : 'Unable to refresh documents.'))} aria-label="Refresh documents"><Activity size={16} /></button></div>
       {documents.length ? <div className="doc-table">{documents.map(name => <div className="doc-row" key={name}>
         <div className="file-icon">{/\.(png|jpe?g|bmp|tiff)$/i.test(name) ? <FileImage size={17} /> : <FileText size={17} />}</div>
         <div className="doc-meta"><b>{name}</b><small>Available for research</small></div><span className="badge"><i /> Indexed</span>
-        <button className="icon-button" aria-label={`Delete ${name}`} onClick={() => void run(() => api.remove(name), () => void refreshDocuments())}><Trash2 size={15} /></button>
+        <button className="icon-button" aria-label={`Remove ${name} from index`} title="Remove from index" disabled={busy} onClick={() => void run(() => api.remove(name), response => {
+          const remaining = response.data?.remaining_documents;
+          const nextDocuments = Array.isArray(remaining) && remaining.every(item => typeof item === 'string')
+            ? remaining as string[]
+            : documents.filter(document => document !== name);
+          setDocuments(nextDocuments);
+          setSelected(current => current === name ? nextDocuments[0] || '' : current);
+          setSecond(current => current === name ? nextDocuments.find(document => document !== nextDocuments[0]) || '' : current);
+        })}><Trash2 size={15} /></button>
       </div>)}</div> : <EmptyState title="No documents yet" text="Upload your first PDF or image to start a grounded research session." action={() => fileInput.current?.click()} />}
     </>;
   }
