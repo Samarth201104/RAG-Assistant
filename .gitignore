@@ -80,9 +80,18 @@ backend/logs/
 *.log
 
 # =============================================================================
-# Streamlit
+# Node / Next.js
 # =============================================================================
-.streamlit/secrets.toml
+node_modules/
+.next/
+out/
+**/node_modules/
+**/.next/
+**/.env
+**/.env.local
+**/.env.*.local
+frontend/.env.local
+frontend/.env.*.local
 
 # =============================================================================
 # ChromaDB / Vector Database

@@ -1,384 +1,113 @@
-# 🤖 MultiModal RAG Research Assistant
+# MultiModal RAG Research Assistant
 
-An enterprise-grade **MultiModal Retrieval-Augmented Generation (RAG)** application that enables users to upload PDFs and images, perform semantic search, ask context-aware questions, generate summaries, compare documents, and create study notes using **FastAPI**, **LangChain**, **Gemini**, **ChromaDB**, and **Sentence Transformers**.
+An AI research workspace for uploading PDFs and images, asking grounded questions, searching indexed passages, summarizing papers, comparing documents, and generating study notes.
 
----
+## Architecture
 
-# 🚀 Features
-
-- 📄 Upload PDF documents
-- 🖼️ Upload images with OCR support
-- 💬 Context-aware AI Chat
-- 📚 Semantic Search using Vector Embeddings
-- 📝 AI-powered Document Summarization
-- ⚖️ Multi-document Comparison
-- 📖 Automatic Study Notes Generation
-- 🔍 Citation-aware Responses
-- 🧠 ChromaDB Vector Database
-- ⚡ FastAPI Backend
-- 🎨 Streamlit Frontend
-- 🐳 Docker & Docker Compose Support
-
----
-
-# 🏗️ System Architecture
-
-```
-                        User
-                          │
-                          ▼
-                Streamlit Frontend
-                          │
-                    REST API Calls
-                          │
-                          ▼
-                  FastAPI Backend
-                          │
-        ┌─────────────────┼─────────────────┐
-        │                 │                 │
-        ▼                 ▼                 ▼
-   PDF Processing     Image OCR         Gemini 2.5 Flash
-      (PyMuPDF)      (EasyOCR)              LLM
-        │                 │
-        └────────────┬────┘
-                     ▼
-             Text Chunking
-                     ▼
-      Sentence Transformer Embeddings
-                     ▼
-              Chroma Vector Database
-                     ▼
-            Semantic Retrieval (RAG)
-                     ▼
-              AI Generated Response
+```text
+Next.js + React + TypeScript frontend
+              ↓ REST API
+       Existing FastAPI backend
+              ↓
+ LangChain · LangGraph · Gemini · ChromaDB
+              ↓
+ PDF extraction · OCR · embeddings · retrieval
 ```
 
----
+The frontend is a client for the existing FastAPI API. All document processing and AI/RAG work remains in the backend.
 
-# 🛠 Tech Stack
+## Features
 
-## Backend
+- PDF and image uploads with multi-file support
+- Indexed document listing and deletion
+- RAG chat with backend citations
+- Semantic retrieval of source passages
+- Document summarization and comparison
+- Configurable study-note generation
+- Light and dark themes, responsive navigation, and mobile layout
 
-- FastAPI
-- LangChain
-- LangGraph
-- Gemini 2.5 Flash
-- ChromaDB
-- Sentence Transformers
-- EasyOCR
-- PyMuPDF
-- OpenCV
-- Pillow
+## Requirements
 
-## Frontend
+- Python 3.10+ and backend dependencies from `backend/requirements.txt`
+- Node.js 20+
+- A Gemini API key configured only in the backend
 
-- Streamlit
+## Run locally
 
-## AI / ML
+### Backend
 
-- Retrieval-Augmented Generation (RAG)
-- Semantic Search
-- Vector Embeddings
-- OCR
-- Prompt Engineering
-
-## Deployment
-
-- Docker
-- Docker Compose
-
----
-
-# 📂 Project Structure
-
-```
-RAG-System/
-│
-├── backend/
-│   ├── api/
-│   ├── core/
-│   ├── data/
-│   ├── logs/
-│   ├── models/
-│   ├── prompts/
-│   ├── services/
-│   ├── utils/
-│   ├── vectordb/
-│   ├── vectorstore/
-│   ├── Dockerfile
-│   ├── main.py
-│   ├── requirements.txt
-│   └── requirements-docker.txt
-│
-├── frontend/
-│   ├── assets/
-│   ├── components/
-│   ├── services/
-│   ├── utils/
-│   ├── views/
-│   ├── Dockerfile
-│   ├── app.py
-│   └── requirements.txt
-│
-├── docker-compose.yml
-├── .gitignore
-└── README.md
-```
-
----
-
-# ⚙️ Local Installation
-
-## 1. Clone Repository
-
-```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-cd RAG-System
-```
-
----
-
-## 2. Create Virtual Environment
-
-### Windows
-
-```bash
-python -m venv venv
-venv\Scripts\activate
-```
-
-### Linux / macOS
-
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
-
----
-
-## 3. Install Backend Dependencies
+Create `backend/.env` with the settings described in `backend/.env.example`, including `GEMINI_API_KEY`, then:
 
 ```bash
 cd backend
 pip install -r requirements.txt
-```
-
----
-
-## 4. Install Frontend Dependencies
-
-```bash
-cd ../frontend
-pip install -r requirements.txt
-```
-
----
-
-# 🔑 Environment Variables
-
-## Backend
-
-Create
-
-```
-backend/.env
-```
-
-Example
-
-```env
-GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-
-GEMINI_MODEL=gemini-2.5-flash
-
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-
-CHROMA_DB_DIRECTORY=vectordb
-
-CHUNK_SIZE=1000
-
-CHUNK_OVERLAP=200
-
-TOP_K=5
-```
-
----
-
-## Frontend
-
-Create
-
-```
-frontend/.env
-```
-
-Example
-
-```env
-BACKEND_URL=http://127.0.0.1:8000
-```
-
----
-
-# 🔐 Get Gemini API Key
-
-1. Visit **Google AI Studio**
-2. Sign in with your Google account.
-3. Generate an API key.
-4. Copy the key.
-5. Paste it into
-
-```
-backend/.env
-```
-
----
-
-# ▶️ Running the Application
-
-## Start Backend
-
-```bash
-cd backend
-
 python main.py
 ```
 
-Backend
+FastAPI runs at [http://127.0.0.1:8000](http://127.0.0.1:8000), with API documentation at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 
-```
-http://127.0.0.1:8000
-```
-
-Swagger
-
-```
-http://127.0.0.1:8000/docs
-```
-
----
-
-## Start Frontend
+### Frontend
 
 ```bash
 cd frontend
-
-streamlit run app.py
+npm install
+npm run dev
 ```
 
-Frontend
+Next.js runs at [http://localhost:3000](http://localhost:3000). Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to the FastAPI origin. The default is `http://127.0.0.1:8000`.
 
-```
-http://localhost:8501
-```
+## API integration
 
----
+The centralized client in `frontend/lib/api.ts` uses these existing endpoints:
 
-# 🐳 Docker Deployment
+| Feature | Endpoint |
+| --- | --- |
+| Health status | `GET /health` |
+| Upload PDFs / images | `POST /upload/pdf`, `POST /upload/image` (`files` multipart field) |
+| List documents | `GET /upload/pdfs`, `/upload/images`, `/upload/documents` |
+| Delete indexed document | `DELETE /upload/document/{filename}` |
+| RAG chat | `POST /query` (`question`, `top_k`) |
+| Semantic retrieval | `POST /query/retrieve` (`question`, `top_k`) |
+| Summarization | `POST /summarize` (`filename`) |
+| Comparison | `POST /compare` (`document_1`, `document_2`) |
+| Study notes | `POST /notes` (`filename`, `note_type`) |
 
-## Build Containers
+The backend enables CORS for all origins already, so no backend CORS change was needed. Keep all model keys and backend secrets in `backend/.env`; do not use `NEXT_PUBLIC_` for secrets.
+
+## Docker
+
+The Compose stack exposes FastAPI on port 8000 and Next.js on port 3000:
 
 ```bash
 docker compose build
-```
-
----
-
-## Start Containers
-
-```bash
 docker compose up -d
-```
-
----
-
-## Stop Containers
-
-```bash
+docker compose logs -f
 docker compose down
 ```
 
----
+The browser frontend uses `http://localhost:8000` as its API URL. The backend container and its data, vector database, and logs remain as configured in `docker-compose.yml`.
 
-## View Logs
+## Backend configuration
 
-```bash
-docker compose logs -f
+Create `backend/.env` from `backend/.env.example`. Configure the backend values there, including:
+
+```env
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GEMINI_MODEL=gemini-2.5-flash
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+CHROMA_DB_PATH=vectordb
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=200
+TOP_K=5
 ```
 
----
+The frontend requires only the public API origin; it does not handle backend credentials. For Docker, set the public frontend API origin at build time with `NEXT_PUBLIC_API_URL` if the browser should reach FastAPI at an address other than `http://localhost:8000`.
 
-## Restart Containers
+## Project structure
 
-```bash
-docker compose restart
+```text
+backend/       FastAPI routes and existing RAG/document services
+frontend/app/  Next.js App Router UI and design system
+frontend/lib/  Typed centralized REST API client
+docker-compose.yml
 ```
-
----
-
-# 📌 Docker Architecture
-
-The project uses **two Docker containers**.
-
-| Container | Purpose |
-|------------|----------|
-| Backend | FastAPI + LangChain + Gemini + ChromaDB |
-| Frontend | Streamlit UI |
-
-Communication occurs over the internal Docker network.
-
-```
-Frontend
-http://backend:8000
-        │
-        ▼
-Backend
-```
-
----
-
-# 📖 API Documentation
-
-Swagger UI
-
-```
-http://localhost:8000/docs
-```
-
-Includes APIs for
-
-- Health
-- Upload PDF
-- Upload Image
-- Chat
-- Summarize
-- Compare
-- Notes
-
----
-
-# ✨ Application Workflow
-
-1. Upload PDFs or Images.
-2. Extract text.
-3. Perform OCR (for images).
-4. Split into semantic chunks.
-5. Generate vector embeddings.
-6. Store embeddings in ChromaDB.
-7. Retrieve relevant chunks.
-8. Send retrieved context to Gemini.
-9. Generate context-aware responses with citations.
-
----
-
-# 👨‍💻 Author
-
-**Samarth More**
-
-Artificial Intelligence & Machine Learning Engineer
-
----
-
-# 📄 License
-
-This project is intended for educational, research, and portfolio purposes.

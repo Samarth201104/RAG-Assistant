@@ -8,7 +8,7 @@ Responsibilities
 1. Generate citations from retrieved chunks.
 2. Remove duplicate citations.
 3. Format citations for API responses.
-4. Format citations for Streamlit UI.
+4. Format citations for API consumers.
 """
 
 from typing import Dict, List
@@ -108,7 +108,7 @@ class CitationService:
         citations: List[Dict],
     ) -> str:
         """
-        Markdown formatted citations for Streamlit.
+        Markdown formatted citations for API consumers.
         """
 
         if not citations:

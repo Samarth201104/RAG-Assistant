@@ -1,36 +1,7 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-
-# Virtual environments
-venv/
-.venv/
-
-# Environment
-.env
-
-# Git
+node_modules
+.next
 .git
 .gitignore
-
-# IDE
-.vscode/
-.idea/
-
-# Cache
-.pytest_cache/
-.mypy_cache/
-
-# Build
-build/
-dist/
-*.egg-info/
-
-# Streamlit cache
-.streamlit/cache/
-
-# OS
-.DS_Store
-Thumbs.db
+README.md
+.env*
+npm-debug.log*
