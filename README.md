@@ -4,24 +4,6 @@ RAG-Assistant is a document research workspace. Upload PDFs or images, then ask 
 
 The repository contains a Next.js web application and the existing Python RAG backend. The browser frontend calls the backend REST API directly.
 
-## Contents
-
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Technology](#technology)
-- [Architecture](#architecture)
-- [Repository layout](#repository-layout)
-- [Prerequisites](#prerequisites)
-- [Local setup](#local-setup)
-- [Configuration](#configuration)
-- [Using the application](#using-the-application)
-- [RAG pipeline details](#rag-pipeline-details)
-- [Troubleshooting](#troubleshooting)
-- [Limitations and possible improvements](#limitations-and-possible-improvements)
-- [Testing and development](#testing-and-development)
-- [Contributing](#contributing)
-- [License and attribution](#license-and-attribution)
-
 ## Features
 
 - Upload one or more PDF files and images (`.png`, `.jpg`, `.jpeg`, `.bmp`, `.tiff`).
@@ -31,10 +13,6 @@ The repository contains a Next.js web application and the existing Python RAG ba
 - Search and inspect retrieved passages without generating an answer.
 - Generate document summaries, compare two documents, and create study notes in several formats.
 - Browse and remove indexed documents, use a responsive Next.js interface, switch themes, and start a fresh in-page conversation.
-
-## Screenshots
-
-The repository does not include a live demo or committed application screenshots. Screenshots can be added here later using relative paths to committed image files.
 
 ## Technology
 
@@ -117,11 +95,12 @@ flowchart TD
 │   ├── package.json         Frontend scripts and dependencies
 │   └── package-lock.json    Locked npm dependency tree
 ├── docker-compose.yml       Backend and frontend services, ports, health check, and data mounts
+├── LICENSE                  MIT License for this project
 ├── .gitignore               Local secrets, environments, caches, and generated data exclusions
 └── README.md                This guide
 ```
 
-There is no committed test directory, license file, screenshot, sample document, or model asset. Runtime data and downloaded model weights are not committed.
+There is no committed test directory, sample document, or model asset. Runtime data and downloaded model weights are not committed.
 
 ## Prerequisites
 
@@ -255,7 +234,7 @@ Create `backend/.env` from `backend/.env.example`. The `.env` file is local conf
 
 In Docker, the Compose mounts and Docker working directory make the data and vector-store defaults resolve under `/app` in the container.
 
-Create a Gemini API key through [Google AI for Developers](https://ai.google.dev/gemini-api/docs/api-key). Keep it in `backend/.env`, never in frontend variables, source control, screenshots, or issue reports. Gemini access is subject to provider availability, quotas, and pricing; check the provider's current terms for your account.
+Create a Gemini API key through [Google AI for Developers](https://ai.google.dev/gemini-api/docs/api-key). Keep it in `backend/.env`, never in frontend variables, source control, or issue reports. Gemini access is subject to provider availability, quotas, and pricing; check the provider's current terms for your account.
 
 ### Frontend environment variable
 
@@ -359,9 +338,9 @@ npm run start
 3. Run the available checks (currently there is no committed automated test suite; at minimum build the frontend and manually exercise affected API behavior).
 4. Open a pull request describing the change and the checks performed.
 
-## License and attribution
+## License
 
-There is no root `LICENSE` file, so this repository does not currently state a project license. Ask the repository owner to choose and add one before redistributing the project under an assumed license. Dependency, model, and upstream project terms remain separate and should be reviewed for the intended use; this README does not grant rights to third-party components.
+This personal project is licensed under the [MIT License](LICENSE). You may use, copy, modify, distribute, sublicense, and sell copies of the project, provided the copyright and license notices are included. The software is provided without warranty. This license applies to this project's code; third-party libraries, models, and services remain subject to their own terms.
 
 Key upstream references:
 
@@ -370,5 +349,3 @@ Key upstream references:
 - [Hugging Face model card: all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
 - [EasyOCR](https://github.com/JaidedAI/EasyOCR)
 - [Google Gemini API key documentation](https://ai.google.dev/gemini-api/docs/api-key)
-
-Project repository: [Samarth201104/RAG-Assistant](https://github.com/Samarth201104/RAG-Assistant).
