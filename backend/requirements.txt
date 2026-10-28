@@ -3,16 +3,9 @@ uvicorn
 python-dotenv
 python-multipart
 
-requests
-httpx
-
-langchain
 langchain-core
-langchain-community
 langchain-google-genai
 langchain-text-splitters
-
-langgraph
 
 chromadb
 langchain-chroma
@@ -25,7 +18,6 @@ langchain-huggingface
 huggingface_hub
 hf-xet
 
-google-generativeai
 google-genai
 
 easyocr
@@ -33,8 +25,4 @@ opencv-python-headless
 pymupdf
 Pillow
 numpy
-
 scikit-learn
-pandas
-
-watchfiles
