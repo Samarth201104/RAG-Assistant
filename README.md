@@ -95,7 +95,6 @@ flowchart TD
 │   ├── package.json         Frontend scripts and dependencies
 │   └── package-lock.json    Locked npm dependency tree
 ├── docker-compose.yml       Backend and frontend services, ports, health check, and data mounts
-├── LICENSE                  MIT License for this project
 ├── .gitignore               Local secrets, environments, caches, and generated data exclusions
 └── README.md                This guide
 ```
@@ -337,15 +336,3 @@ npm run start
 2. Make a scoped change and update relevant documentation or configuration.
 3. Run the available checks (currently there is no committed automated test suite; at minimum build the frontend and manually exercise affected API behavior).
 4. Open a pull request describing the change and the checks performed.
-
-## License
-
-This personal project is licensed under the [MIT License](LICENSE). You may use, copy, modify, distribute, sublicense, and sell copies of the project, provided the copyright and license notices are included. The software is provided without warranty. This license applies to this project's code; third-party libraries, models, and services remain subject to their own terms.
-
-Key upstream references:
-
-- [LangChain](https://github.com/langchain-ai/langchain)
-- [Chroma](https://github.com/chroma-core/chroma)
-- [Hugging Face model card: all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
-- [EasyOCR](https://github.com/JaidedAI/EasyOCR)
-- [Google Gemini API key documentation](https://ai.google.dev/gemini-api/docs/api-key)
