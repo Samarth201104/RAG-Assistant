@@ -223,21 +223,36 @@ async def delete_document(
     filename: str,
 ):
     """
-    Delete a document from ChromaDB.
+    Delete a document from ChromaDB and backend upload storage.
     """
 
     try:
 
-        document_service.delete_vector_document(
+        deletion = document_service.delete_document(
             filename
+        )
+
+        message = (
+            f"{filename} deleted from the index and backend storage."
+            if deletion["deleted_file"]
+            else f"{filename} removed from the index; its uploaded file was already missing."
         )
 
         return GenericResponse(
             success=True,
-            message=f"{filename} deleted successfully.",
+            message=message,
             data={
+                "deleted_chunks": deletion["deleted_chunks"],
+                "deleted_file": deletion["deleted_file"],
                 "remaining_documents": document_service.list_vector_documents(),
             },
+        )
+
+    except ValueError as error:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
         )
 
     except Exception as error:

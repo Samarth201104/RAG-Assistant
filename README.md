@@ -12,7 +12,7 @@ The repository contains a Next.js web application and the existing Python RAG ba
 - Ask questions across the indexed library and receive answers with source filename, page, and passage citations.
 - Search and inspect retrieved passages without generating an answer.
 - Generate document summaries, compare two documents, and create study notes in several formats.
-- Browse and remove indexed documents, use a responsive Next.js interface, switch themes, and start a fresh in-page conversation.
+- Browse and permanently delete uploaded PDFs/images and their indexed chunks, use a responsive Next.js interface, switch themes, and start a fresh in-page conversation.
 
 ## Technology
 
@@ -249,7 +249,7 @@ Create a Gemini API key through [Google AI for Developers](https://ai.google.dev
 4. Use **Research assistant** to ask a question across the indexed library. Answers display source filename, page, and passage metadata returned by the backend. The conversation is held in the current page state; **New conversation** clears it.
 5. Use **Semantic search** to retrieve passages without asking Gemini to generate an answer.
 6. Use **Summarize**, **Compare**, or **Study notes** for document-level generation. Study-note formats exposed by the UI are detailed, short, flashcards, interview, MCQ, revision, cheatsheet, mindmap, FAQ, and exam.
-7. In **Documents**, the remove action deletes that document's chunks from the Chroma index. It does not delete the original upload from disk; the backend API currently only removes indexed vectors.
+7. In **Documents**, choose the delete action to remove the document's chunks from ChromaDB and permanently delete its uploaded PDF/image from backend storage. The frontend removes it from the visible library after the backend confirms deletion.
 
 Try questions such as “What are the main findings?”, “Which limitations do the authors discuss?”, or “What method did the paper use?”. Ask focused questions for better retrieval.
 
@@ -263,7 +263,7 @@ The frontend uses these backend routes:
 | `POST` | `/upload/pdf`, `/upload/image` | Save, process, and index uploaded files (`files` multipart field). |
 | `GET` | `/upload/pdfs`, `/upload/images` | List original uploads by type. |
 | `GET` | `/upload/documents` | List documents represented in ChromaDB. |
-| `DELETE` | `/upload/document/{filename}` | Remove a document's vectors from ChromaDB. |
+| `DELETE` | `/upload/document/{filename}` | Remove a document's vectors and uploaded file from backend storage. |
 | `POST` | `/query` | Ask across indexed documents. |
 | `POST` | `/query/retrieve` | Retrieve relevant passages without generation. |
 | `POST` | `/summarize` | Summarize an indexed document. |
@@ -307,7 +307,7 @@ Current implementation limitations:
 - PDF extraction depends on a text layer; there is no PDF OCR fallback.
 - EasyOCR is configured for English only. Image processing also calls Gemini for a description.
 - Uploaded originals and Chroma vectors are stored locally; there is no remote object store or multi-user document isolation in this repository.
-- Removing a document from the UI removes its Chroma vectors, while the uploaded original remains on disk.
+- Deleting a document removes both its Chroma vectors and uploaded original; keep separate backups if the original must be retained.
 - No explicit upload size/count limit is enforced in the application code.
 - Gemini availability, quota, and latency affect generation features. Local embedding and OCR can be resource-intensive.
 - The backend currently allows CORS requests from any origin. This is permissive and should be restricted before exposing the API publicly.

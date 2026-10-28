@@ -208,6 +208,31 @@ class FileManager:
 
         return False
 
+    def get_uploaded_file_path(self, filename: str) -> Path:
+        """Return a path for a supported upload without allowing path traversal."""
+
+        if (
+            not filename
+            or filename in {".", ".."}
+            or "/" in filename
+            or "\\" in filename
+        ):
+            raise ValueError("Invalid document filename.")
+
+        extension = self.get_extension(filename)
+        if extension in SUPPORTED_PDF_EXTENSIONS:
+            directory = self.pdf_dir
+        elif extension in SUPPORTED_IMAGE_EXTENSIONS:
+            directory = self.image_dir
+        else:
+            raise ValueError("Unsupported document file type.")
+
+        path = directory / filename
+        if path.resolve().parent != directory.resolve():
+            raise ValueError("Invalid document filename.")
+
+        return path
+
     # ---------------------------------------------------------
 
     def list_uploaded_pdfs(self) -> List[str]:

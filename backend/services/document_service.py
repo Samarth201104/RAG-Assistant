@@ -145,19 +145,31 @@ class DocumentService:
 
     # ---------------------------------------------------------
 
-    @staticmethod
     def delete_document(
-        filepath: str,
-    ) -> bool:
+        self,
+        filename: str,
+    ) -> dict:
         """
-        Delete uploaded document.
+        Remove an uploaded document from both ChromaDB and backend storage.
         """
 
-        path = Path(filepath)
+        path = self.file_manager.get_uploaded_file_path(filename)
+        deleted_chunks = self.vectorstore.delete_document(filename)
+        deleted_file = self.file_manager.delete_file(path)
 
-        return file_manager.delete_file(path)
-    
-# ---------------------------------------------------------
+        logger.info(
+            "Removed %s from ChromaDB (%s chunks) and upload storage (file removed: %s).",
+            filename,
+            deleted_chunks,
+            deleted_file,
+        )
+
+        return {
+            "deleted_chunks": deleted_chunks,
+            "deleted_file": deleted_file,
+        }
+
+    # ---------------------------------------------------------
 
     def list_vector_documents(
         self,
@@ -172,7 +184,7 @@ class DocumentService:
         filename: str,
     ):
 
-        self.vectorstore.delete_document(
+        return self.vectorstore.delete_document(
             filename
         )
 

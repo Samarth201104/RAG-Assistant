@@ -13,7 +13,11 @@ export type SearchResponse = {
   retrieved_chunks: number;
   documents: { content: string; metadata: Record<string, unknown> }[];
 };
-export type DeleteResponse = { remaining_documents: string[] };
+export type DeleteResponse = {
+  deleted_chunks: number;
+  deleted_file: boolean;
+  remaining_documents: string[];
+};
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;

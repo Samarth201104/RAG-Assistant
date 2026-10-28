@@ -130,6 +130,8 @@ class ChromaManager:
         if ids:
             self.vectorstore.delete(ids=ids)
 
+        return len(ids)
+
     # ------------------------------------------------------------
 
     def document_exists(self, filename: str):

@@ -178,15 +178,18 @@ export default function Home() {
       {documents.length ? <div className="doc-table">{documents.map(name => <div className="doc-row" key={name}>
         <div className="file-icon">{/\.(png|jpe?g|bmp|tiff)$/i.test(name) ? <FileImage size={17} /> : <FileText size={17} />}</div>
         <div className="doc-meta"><b>{name}</b><small>Available for research</small></div><span className="badge"><i /> Indexed</span>
-        <button className="icon-button" aria-label={`Remove ${name} from index`} title="Remove from index" disabled={busy} onClick={() => void run(() => api.remove(name), response => {
-          const remaining = response.data?.remaining_documents;
-          const nextDocuments = Array.isArray(remaining) && remaining.every(item => typeof item === 'string')
-            ? remaining as string[]
-            : documents.filter(document => document !== name);
-          setDocuments(nextDocuments);
-          setSelected(current => current === name ? nextDocuments[0] || '' : current);
-          setSecond(current => current === name ? nextDocuments.find(document => document !== nextDocuments[0]) || '' : current);
-        })}><Trash2 size={15} /></button>
+        <button className="icon-button" aria-label={`Delete ${name} from the library and backend storage`} title="Delete uploaded file and indexed data" disabled={busy} onClick={() => {
+          if (!window.confirm(`Delete ${name} from the library and permanently remove its uploaded file from backend storage?`)) return;
+          void run(() => api.remove(name), response => {
+            const remaining = response.data?.remaining_documents;
+            const nextDocuments = Array.isArray(remaining) && remaining.every(item => typeof item === 'string')
+              ? remaining as string[]
+              : documents.filter(document => document !== name);
+            setDocuments(nextDocuments);
+            setSelected(current => current === name ? nextDocuments[0] || '' : current);
+            setSecond(current => current === name ? nextDocuments.find(document => document !== nextDocuments[0]) || '' : current);
+          });
+        }}><Trash2 size={15} /></button>
       </div>)}</div> : <EmptyState title="No documents yet" text="Upload your first PDF or image to start a grounded research session." action={() => fileInput.current?.click()} />}
     </>;
   }
